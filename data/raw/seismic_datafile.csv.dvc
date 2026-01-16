@@ -1,0 +1,5 @@
+outs:
+- md5: 77eb3067c7fe0a73db773b0837fb7f9b
+  size: 507565
+  hash: md5
+  path: seismic_datafile.csv
