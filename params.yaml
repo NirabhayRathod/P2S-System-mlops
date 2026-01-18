@@ -1,0 +1,18 @@
+features:
+  feature_columns: 
+    - sensor_reading
+    - noise_level
+    - rolling_avg
+    - reading_diff
+    - pga
+    - snr
+  target_pwave: p_wave_detected
+  target_swave: ttf_seconds
+  test_size: 0.2
+  random_state: 42
+paths:
+  data_raw: data/raw/seismic_datafile.csv
+  data_processed : data/processed/features.csv
+  cl_model : models/best_pwave_model.pkl
+  rg_model : models/best_swave_model.pkl
+  test_data: data/processed/test_data.pkl
