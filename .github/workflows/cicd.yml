@@ -49,11 +49,19 @@ jobs:
         pip install dvc dvc-gdrive  # Add DVC
     
     - name: Configure DVC
+      env:
+        DVC_REMOTE_URL: ${{ secrets.DVC_REMOTE_URL }}
+        DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
       run: |
-        dvc --version
-        # Only add remote if it doesn't exist
-        dvc remote list | grep origin || dvc remote add -d origin https://github.com/NirabhayRathod/P2S-System-mlops.dvc
+        dvc remote remove origin 2>/dev/null || true
+        dvc remote add -d origin "$DVC_REMOTE_URL"
     
+        if [ -n "$DAGSHUB_TOKEN" ]; then
+          dvc remote modify origin --local auth basic
+          dvc remote modify origin --local user "$DAGSHUB_TOKEN"
+          dvc remote modify origin --local password "$DAGSHUB_TOKEN"
+        fi
+        
     - name: Pull DVC data
       run: |
         # Pull data files
