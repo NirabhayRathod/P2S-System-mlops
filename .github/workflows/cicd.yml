@@ -30,34 +30,42 @@ jobs:
       - name: Run tests
         run: pytest tests/ || echo "No tests found"
 
-  evaluate-models:
-    needs: test-build
+  evaluate:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install dvc dvc-gdrive  # Add DVC
+    
+    - name: Configure DVC
+      run: |
+        dvc --version
+        dvc remote add -d origin https://github.com/NirabhayRathod/P2S-System-mlops.dvc
+    
+    - name: Pull DVC data
+      run: |
+        # Pull data files
+        dvc pull
         
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-        
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-        
-      - name: Run model evaluation
-        run: python evaluate.py
-        
-      - name: Check evaluation result
-        if: ${{ failure() }}
-        run: |
-          echo "Models failed evaluation thresholds"
-          echo "Check evaluate.py output above"
+        # Verify files exist
+        ls -la data/processed/
+    
+    - name: Run model evaluation
+      run: |
+        python evaluate.py
 
   build-publish:
-    needs: evaluate-models
+    needs: evaluate
     runs-on: ubuntu-latest
     
     steps:
