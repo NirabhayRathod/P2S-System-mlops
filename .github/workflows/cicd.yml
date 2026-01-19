@@ -52,17 +52,16 @@ jobs:
       run: |
         dvc remote remove origin 2>/dev/null || true
         dvc remote add -d origin ${{ secrets.DVC_REMOTE_URL }}
-    
-        if [ -n "$DAGSHUB_TOKEN" ]; then
-          dvc remote modify origin --local auth basic
-          dvc remote modify origin --local user ${{ secrets.DVC_REMOTE_URL }}
-          dvc remote modify origin --local password ${{ secrets.DAGSHUB_TOKEN }}
-        fi
+  
+        dvc remote modify origin --local auth basic
+        dvc remote modify origin --local user ${{ secrets.DVC_REMOTE_URL }}
+        dvc remote modify origin --local password ${{ secrets.DAGSHUB_TOKEN }}
+        
 
     - name: Pull DVC data
       run: |
         # Pull data files
-        dvc pull
+        dvc pull origin
         
         # Verify files exist
         ls -la data/processed/
