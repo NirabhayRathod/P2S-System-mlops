@@ -46,7 +46,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install dvc dvc-gdrive  # Add DVC
+        pip install 'dvc<3.0.0'  # Add DVC
     
     - name: Configure DVC
       run: |
