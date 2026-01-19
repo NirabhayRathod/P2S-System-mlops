@@ -1,0 +1,13 @@
+numpy
+pandas
+scikit-learn
+xgboost
+lightgbm
+mlflow
+dvc
+pyyaml
+joblib
+streamlit
+plotly
+apache-airflow
+pytest

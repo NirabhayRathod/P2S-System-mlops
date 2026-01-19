@@ -6,17 +6,23 @@ from src.model_pwave import PWaveClassifier
 from src.model_swave import SWaveRegressor
 from logger import logging
 import sys
-import os
+import os 
+from dotenv import load_dotenv
+load_dotenv()
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 def train_earthquake_models():
     with open('params.yaml','r')as f:
-        config=yaml.safe_dump_all(f)
+        config=yaml.safe_load(f)
     paths=config['paths']
     
     # Set MLflow tracking URI (DagsHub)
+    os.environ['MLFLOW_TRACKING_USERNAME'] = os.getenv("MLFLOW_TRACKING_USERNAME")
+    os.environ['MLFLOW_TRACKING_PASSWORD'] = os.getenv("MLFLOW_TRACKING_PASSWORD")
+    TRACKING_URI=os.getenv('MLFLOW_TRACKING_URI')
     logging.info('mlfow setup done')
-    mlflow.set_tracking_uri("https://dagshub.com/yourname/P2S-System-mlops.mlflow")
+    mlflow.set_tracking_uri(TRACKING_URI)
     mlflow.set_experiment("earthquake_warning_system")
     logging.info('mlfow setup done with named - earthquake_warning_system - ')
     
@@ -61,9 +67,9 @@ def train_earthquake_models():
     
     logging.info(f'Test data saved to: {paths["test_data"]}')
     # Train P-wave classifier
-    print("="*50)
+    print("="*21)
     print("TRAINING P-WAVE CLASSIFIER")
-    print("="*50)
+    print("="*21)
     
     with mlflow.start_run(run_name="pwave_classifier_comparison"):
         classifier = PWaveClassifier()
@@ -76,9 +82,14 @@ def train_earthquake_models():
         logging.info('models param and metric logged in mlflow for p wave ')
         mlflow.log_param("best_pwave_model", best_name)
         mlflow.log_metric("best_pwave_roc_auc", results[best_name]['metrics']['roc_auc'])
-    
+        mlflow.sklearn.log_model(
+            sk_model=classifier.best_model ,
+            name="P-Wave classifier",
+            input_example=X_train,
+            registered_model_name='best model for classfication of p wave'
+        )
     # Train S-wave regressor
-    print("\n" + "="*50)
+    print("\n" + "="*21)
     print("TRAINING S-WAVE REGRESSOR")
     print("="*50)
     
@@ -93,7 +104,12 @@ def train_earthquake_models():
         logging.info('models param and metric logged in mlflow for s wave')
         mlflow.log_param("best_swave_model", best_name)
         mlflow.log_metric("best_swave_rmse", results[best_name]['metrics']['rmse'])
-    
+        mlflow.sklearn.log_model(
+            sk_model=regressor.best_model ,
+            name="S-Wave predictor",
+            input_example=X_train,
+            registered_model_name='best model for timing of S wave'
+        )
     print("\n Training complete! Check MLflow for experiment details.")
 
 if __name__ == "__main__":
