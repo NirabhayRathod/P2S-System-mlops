@@ -39,7 +39,7 @@ def evaluate_models():
     print("\n Evaluating P-wave Classifier...")
     try:
         # Load model
-        pwave_model = joblib.load(paths['model_pwave'])
+        pwave_model = joblib.load(paths['cl_model'])
         
         # Predict
         y_pred_proba = pwave_model.predict_proba(X_test_pwave)[:, 1]
@@ -62,7 +62,7 @@ def evaluate_models():
     print("\n Evaluating S-wave Regressor...")
     try:
         # Load model
-        swave_model = joblib.load(paths['model_swave'])
+        swave_model = joblib.load(paths['rg_model'])
         
         # Predict
         y_pred = swave_model.predict(X_test_swave)
