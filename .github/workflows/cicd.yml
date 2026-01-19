@@ -49,22 +49,21 @@ jobs:
         pip install 'dvc<3.0.0'  # Add DVC
     
     - name: Configure DVC
+      env:
+        DVC_REMOTE_URL: ${{ secrets.DVC_REMOTE_URL }}
+        DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
       run: |
         dvc remote remove origin 2>/dev/null || true
-        dvc remote add -d origin ${{ secrets.DVC_REMOTE_URL }}
+        dvc remote add -d origin "$DVC_REMOTE_URL"
   
         dvc remote modify origin --local auth basic
-        dvc remote modify origin --local user ${{ secrets.DVC_REMOTE_URL }}
-        dvc remote modify origin --local password ${{ secrets.DAGSHUB_TOKEN }}
-        
+        dvc remote modify origin --local user token  # FIXED
+        dvc remote modify origin --local password "$DAGSHUB_TOKEN"
 
     - name: Pull DVC data
       run: |
         # Pull data files
-        dvc pull origin
-        
-        # Verify files exist
-        ls -la data/processed/
+        dvc pull 
     
     - name: Run model evaluation
       run: |
