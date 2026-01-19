@@ -31,6 +31,7 @@ jobs:
         run: pytest tests/ || echo "No tests found"
 
   evaluate:
+    needs: test-build
     runs-on: ubuntu-latest
     
     steps:
@@ -50,7 +51,8 @@ jobs:
     - name: Configure DVC
       run: |
         dvc --version
-        dvc remote add -d origin https://github.com/NirabhayRathod/P2S-System-mlops.dvc
+        # Only add remote if it doesn't exist
+        dvc remote list | grep origin || dvc remote add -d origin https://github.com/NirabhayRathod/P2S-System-mlops.dvc
     
     - name: Pull DVC data
       run: |
