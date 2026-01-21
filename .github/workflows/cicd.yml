@@ -33,29 +33,38 @@ jobs:
   evaluate:
     needs: test-build
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v3
-    
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.9'
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    
+        pip install dvc dagshub
+
+    - name: Configure DVC authentication
+      run: |
+        dvc remote modify origin --local auth basic
+        dvc remote modify origin --local user ${{ secrets.DAGSHUB_USER }}
+        dvc remote modify origin --local password ${{ secrets.DAGSHUB_TOKEN }}
+
+    - name: Pull data and model from DVC
+      run: |
+        dvc pull
+        ls -R data || true
+        ls -R models || true
+
     - name: Run model evaluation
       run: |
         python evaluate.py
-
-    - name: Check evaluation result
-      if: failure()  # FIXED: No space before colon, no ${{ }}
-      run: |
-        echo "Model evaluation failed - check logs above"
-
+        
   build-publish:
     needs: evaluate
     runs-on: ubuntu-latest
