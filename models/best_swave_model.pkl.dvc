@@ -1,0 +1,5 @@
+outs:
+- md5: 6b4e4760de812188097717e78af68d0b
+  size: 396452
+  hash: md5
+  path: best_swave_model.pkl
