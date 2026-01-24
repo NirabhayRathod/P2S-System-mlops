@@ -26,14 +26,24 @@ logging.basicConfig(level=logging.INFO)
 # ------------------------------------------------------------------
 import pandas as pd
 
+import numpy as np
+import pandas as pd
+import mlflow.pyfunc
+
+
 class PWavePyFuncModel(mlflow.pyfunc.PythonModel):
     def __init__(self, model):
         self.model = model
 
     def predict(self, context, model_input):
         if isinstance(model_input, pd.DataFrame):
-            return self.model.predict(model_input.values)
-        return self.model.predict(model_input)
+            X = model_input.to_numpy()
+        elif isinstance(model_input, np.ndarray):
+            X = model_input
+        else:
+            X = np.array(model_input)
+
+        return self.model.predict(X)
 
 
 class SWavePyFuncModel(mlflow.pyfunc.PythonModel):
@@ -42,8 +52,14 @@ class SWavePyFuncModel(mlflow.pyfunc.PythonModel):
 
     def predict(self, context, model_input):
         if isinstance(model_input, pd.DataFrame):
-            return self.model.predict(model_input.values)
-        return self.model.predict(model_input)
+            X = model_input.to_numpy()
+        elif isinstance(model_input, np.ndarray):
+            X = model_input
+        else:
+            X = np.array(model_input)
+
+        return self.model.predict(X)
+
 
 
 def train_earthquake_models():
