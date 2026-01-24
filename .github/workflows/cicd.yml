@@ -62,6 +62,10 @@ jobs:
         ls -R models || true
 
     - name: Run model evaluation
+      env:
+        DAGSHUB_USER: ${{ secrets.DAGSHUB_USER }}
+        DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+        DAGSHUB_MLFLOW_URI: ${{ secrets.DAGSHUB_MLFLOW_URI }}
       run: |
         python evaluate.py
         
