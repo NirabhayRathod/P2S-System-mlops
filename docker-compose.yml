@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  p2s-inference:
+    image: nirabhay/p2s-warning-system:latest
+    container_name: p2s_warning_app
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    restart: unless-stopped

@@ -1,405 +1,251 @@
-"""
-Earthquake Warning System Dashboard
-Real model prediction with proper 6 feature inputs
-"""
 
-import streamlit as st
-import pandas as pd
-import numpy as np
-import joblib
-import plotly.graph_objects as go
-from datetime import datetime
-import time
+# Imports
+
 import os
+import numpy as np
+import pandas as pd
+import streamlit as st
+import plotly.graph_objects as go
+from dotenv import load_dotenv
+load_dotenv()
+import mlflow
+import mlflow.pyfunc
 
-# Page config
+
+# Helper: Required environment vars
+
+def require_env(name: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        raise RuntimeError(f"Missing environment variable: {name}")
+    return value
+
+
+# MLflow + DagsHub Configuration
+
+try:
+    DAGSHUB_USER = require_env("DAGSHUB_USER")
+    DAGSHUB_TOKEN = require_env("DAGSHUB_TOKEN")
+    DAGSHUB_MLFLOW_URI = require_env("MLFLOW_TRACKING_URI")
+except RuntimeError as e:
+    st.error(f"❌ Configuration Error: {e}")
+    st.stop()
+
+# Auth for DagsHub MLflow
+os.environ["MLFLOW_TRACKING_USERNAME"] = DAGSHUB_USER
+os.environ["MLFLOW_TRACKING_PASSWORD"] = DAGSHUB_TOKEN
+
+# Set MLflow Tracking URI
+mlflow.set_tracking_uri(DAGSHUB_MLFLOW_URI)
+
+# Streamlit Page Config
+
 st.set_page_config(
-    page_title="Earthquake Warning System",
+    page_title="P2S Earthquake Warning System",
     page_icon="🌍",
     layout="wide"
 )
 
-# Title with your name
-st.title("🌍 P2S Earthquake Early Warning System")
-st.markdown("**Dual ML Model: P-wave detection + S-wave arrival prediction**")
+# Global Styling
 
-# Load models function
-@st.cache_resource
+st.markdown("""
+<style>
+.main { background-color: #0e1117; }
+h1, h2, h3 { color: #f1f5f9; }
+.badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background-color: #1f2937;
+    color: #38bdf8;
+    font-size: 0.8rem;
+    margin-right: 6px;
+}
+.info-card {
+    background-color: #020617;
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px solid #1e293b;
+    margin-bottom: 20px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Header
+
+st.markdown("""
+<div class="info-card">
+    <h1>🌍 P2S Earthquake Early Warning System</h1>
+    <p style="color:#94a3b8;">
+        AI-powered real-time earthquake detection with early warning capability
+    </p>
+    <div>
+        <span class="badge">Machine Learning</span>
+        <span class="badge">MLOps</span>
+        <span class="badge">MLflow</span>
+        <span class="badge">Airflow</span>
+        <span class="badge">Docker</span>
+        <span class="badge">Streamlit</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown(
+    "**Dual ML Models:** P-wave detection (classification) + S-wave arrival prediction (regression)"
+)
+
+
+# Load Models from MLflow Registry
+
+@st.cache_resource(show_spinner=True)
 def load_models():
-    """Load trained ML models"""
+    """
+    Load Production models from MLflow Model Registry.
+    This is the ONLY correct approach for production inference.
+    """
     try:
-        pwave_model = joblib.load("models/best_pwave_model.pkl")
-        swave_model = joblib.load("models/best_swave_model.pkl")
-        return pwave_model, swave_model, True
+        pwave_model = mlflow.pyfunc.load_model(
+            "models:/P2S_PWAVE_MODEL/Production"
+        )
+        swave_model = mlflow.pyfunc.load_model(
+            "models:/P2S_SWAVE_MODEL/Production"
+        )
+        return pwave_model, swave_model
     except Exception as e:
-        st.error(f"❌ Error loading models: {e}")
-        return None, None, False
+        raise RuntimeError(str(e))
 
-# Sidebar - Feature Inputs
+# Sidebar Inputs
+
 with st.sidebar:
-    st.header("📡 Seismic Sensor Input")
-    
-    # Input for all 6 features
-    st.subheader("Sensor Readings")
-    
-    sensor_reading = st.number_input(
-        "Sensor Reading", 
-        min_value=-1000.0, 
-        max_value=1000.0, 
-        value=0.45,
-        help="Raw vibration amplitude"
-    )
-    
-    noise_level = st.slider(
-        "Noise Level", 
-        0.0, 1.0, 0.28,
-        help="Background noise level (0-1)"
-    )
-    
-    rolling_avg = st.number_input(
-        "Rolling Average", 
-        min_value=-100.0, 
-        max_value=100.0, 
-        value=3.07,
-        help="Moving average of recent readings"
-    )
-    
-    reading_diff = st.number_input(
-        "Reading Difference", 
-        min_value=-10.0, 
-        max_value=10.0, 
-        value=0.24,
-        help="Difference from previous reading"
-    )
-    
-    pga = st.slider(
-        "PGA (Peak Ground Acceleration)", 
-        0.0, 1.0, 0.33,
-        help="Peak ground acceleration (0-1)"
-    )
-    
-    snr = st.number_input(
-        "SNR (Signal-to-Noise Ratio)", 
-        min_value=-50.0, 
-        max_value=50.0, 
-        value=16.44,
-        help="Signal quality metric"
-    )
-    
-    # Alert threshold
-    threshold = st.slider(
-        "Alert Threshold", 
-        0.0, 1.0, 0.8, 0.05,
-        help="Confidence threshold for earthquake alert"
-    )
-    
+    st.header("📡 Seismic Sensor Inputs")
+
+    sensor_reading = st.number_input("Sensor Reading", -1000.0, 1000.0, 0.45)
+    noise_level = st.slider("Noise Level", 0.0, 1.0, 0.28)
+    rolling_avg = st.number_input("Rolling Average", -100.0, 100.0, 3.07)
+    reading_diff = st.number_input("Reading Difference", -10.0, 10.0, 0.24)
+    pga = st.slider("PGA (Peak Ground Acceleration)", 0.0, 1.0, 0.33)
+    snr = st.number_input("SNR (Signal-to-Noise Ratio)", -50.0, 50.0, 16.44)
+
+    threshold = st.slider("Alert Threshold", 0.0, 1.0, 0.8, 0.05)
+
     st.divider()
-    
-    # Predict button
-    predict_btn = st.button("🚨 PREDICT EARTHQUAKE", type="primary", use_container_width=True)
-    
-    # System status
-    pwave_model, swave_model, models_loaded = load_models()
-    
-    if models_loaded:
-        st.success("✅ Models loaded")
-        st.progress(100, text="System Ready")
-    else:
-        st.error("❌ Models not found")
-        st.info("Run `python train.py` first")
+    predict_btn = st.button("🚨 PREDICT EARTHQUAKE", use_container_width=True)
 
-# Main Prediction Display
-st.header("Real-time Prediction")
+    # Load models safely
+    try:
+        pwave_model, swave_model = load_models()
+        st.success("✅ Models loaded from MLflow (Production)")
+        model_ready = True
+    except Exception as e:
+        st.error("❌ Model loading failed")
+        st.code(str(e))
+        model_ready = False
 
-if predict_btn and models_loaded:
-    # Create feature array in EXACT same order as training
+
+# How the System Works
+
+st.header("🧠 How This System Works")
+
+st.markdown("""
+<div class="info-card">
+<b>1. Seismic Signal Capture</b><br>
+Raw vibration signals are collected from seismic sensors.<br><br>
+
+<b>2. Feature Engineering</b><br>
+Six engineered features are extracted including amplitude, noise level, PGA, and SNR.<br><br>
+
+<b>3. P-wave Detection</b><br>
+A classification model detects early P-waves indicating earthquake onset.<br><br>
+
+<b>4. S-wave Arrival Prediction</b><br>
+If detected, a regression model predicts remaining time before destructive S-waves arrive.<br><br>
+
+<b>5. Early Warning</b><br>
+The system provides a <b>5–10 second advance warning</b> enabling immediate safety actions.
+</div>
+""", unsafe_allow_html=True)
+
+
+# Prediction Section
+
+st.header("📡 Live Earthquake Prediction Dashboard")
+
+if predict_btn and model_ready:
+
     features = np.array([[
-        sensor_reading,  # sensor_reading
-        noise_level,     # noise_level  
-        rolling_avg,     # rolling_avg
-        reading_diff,    # reading_diff
-        pga,             # pga
-        snr              # snr
+        sensor_reading,
+        noise_level,
+        rolling_avg,
+        reading_diff,
+        pga,
+        snr
     ]])
-    
-    # Make predictions
-    pwave_probability = pwave_model.predict_proba(features)[0, 1]
-    
-    # Display results
+
+    pwave_probability = float(pwave_model.predict(features)[0])
+
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
         st.metric("P-wave Probability", f"{pwave_probability:.2%}")
-    
+
     with col2:
-        # Earthquake detection
         if pwave_probability > threshold:
             st.error("🔴 EARTHQUAKE DETECTED")
         else:
             st.success("🟢 NO EARTHQUAKE")
-    
+
     with col3:
-        # Only predict S-wave if earthquake detected
         if pwave_probability > threshold:
-            swave_arrival = swave_model.predict(features)[0]
+            swave_arrival = float(swave_model.predict(features)[0])
             st.metric("S-wave Arrival", f"{swave_arrival:.1f} seconds")
         else:
             st.metric("S-wave Arrival", "N/A")
-    
-    # Detailed prediction section
-    st.divider()
-    
-    if pwave_probability > threshold:
-        # EARTHQUAKE DETECTED - Show warning
-        warning_col1, warning_col2 = st.columns([2, 1])
-        
-        with warning_col1:
-            st.error("""
-            ## 🚨 IMMEDIATE ACTION REQUIRED
-            
-            **P-wave detected with {:.0%} confidence**
-            
-            **Expected S-wave arrival: {:.1f} seconds**
-            
-            ### Recommended Actions:
-            1. **DROP** to the ground
-            2. **COVER** under sturdy furniture
-            3. **HOLD ON** until shaking stops
-            4. **EVACUATE** if in tsunami zone
-            """.format(pwave_probability, swave_arrival))
-        
-        with warning_col2:
-            # Countdown visualization
-            st.subheader("⏳ Time to Impact")
-            if swave_arrival > 0:
-                # Create countdown
-                time_left = swave_arrival
-                countdown_placeholder = st.empty()
-                
-                for i in range(int(time_left), -1, -1):
-                    countdown_placeholder.metric("Seconds remaining", f"{i}")
-                    time.sleep(1)
-            
-            # Emergency contacts
-            with st.expander("📞 Emergency Contacts"):
-                st.write("""
-                - **Emergency**: 112
-                - **Seismic Center**: 1800-123-456
-                - **Tsunami Warning**: 1900-789-012
-                """)
-        
-        # Earthquake intensity prediction
-        st.subheader("📈 Predicted Intensity")
-        
-        # Estimate magnitude based on features (simplified)
-        estimated_magnitude = 4.0 + (pwave_probability * 3.0)
-        
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.metric("Estimated Magnitude", f"{estimated_magnitude:.1f}")
-        with col2:
-            st.metric("Warning Time", f"{swave_arrival:.1f}s")
-        with col3:
-            st.metric("Confidence", f"{pwave_probability:.0%}")
-        
-        # Shake map visualization
-        fig = go.Figure(go.Scatterpolar(
-            r=[pwave_probability, sensor_reading, pga, snr/50],
-            theta=['P-wave Prob', 'Amplitude', 'PGA', 'SNR'],
-            fill='toself',
-            name='Seismic Signature'
-        ))
-        fig.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
-            title="Earthquake Signature Pattern"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    else:
-        # NO EARTHQUAKE - Show normal status
-        st.success("""
-        ## ✅ NO EARTHQUAKE DETECTED
-        
-        **Current Status**: Normal seismic activity
-        
-        **Confidence**: {:.0%} probability of false negative
-        
-        ### System Status:
-        - ✅ P-wave detection: Normal
-        - ✅ Sensor network: Operational
-        - ✅ Prediction models: Ready
-        """.format(1 - pwave_probability))
-        
-        # Show feature visualization
-        st.subheader("📊 Current Seismic Profile")
-        
-        features_df = pd.DataFrame({
-            'Feature': ['Sensor Reading', 'Noise Level', 'Rolling Avg', 
-                       'Reading Diff', 'PGA', 'SNR'],
-            'Value': [sensor_reading, noise_level, rolling_avg, 
-                     reading_diff, pga, snr],
-            'Normal Range': ['±2.0', '0-0.5', '±1.5', '±0.5', '0-0.3', '>5.0']
-        })
-        
-        st.dataframe(features_df, use_container_width=True, hide_index=True)
-        
-        # Feature visualization
-        fig = go.Figure(data=[
-            go.Bar(
-                name='Current Value',
-                x=features_df['Feature'],
-                y=features_df['Value'],
-                marker_color='blue'
-            )
-        ])
-        fig.update_layout(title="Seismic Feature Values", yaxis_title="Value")
-        st.plotly_chart(fig, use_container_width=True)
+
+    fig = go.Figure(go.Scatterpolar(
+        r=[pwave_probability, abs(sensor_reading) / 10, pga, min(abs(snr) / 50, 1)],
+        theta=["P-wave Prob", "Amplitude", "PGA", "SNR"],
+        fill="toself"
+    ))
+    fig.update_layout(
+        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
+        title="Seismic Signature Pattern"
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
 else:
-    # Initial state - no prediction yet
-    st.info("👈 **Enter sensor readings in sidebar and click PREDICT**")
-    
-    # PROJECT DETAILS SECTION
-    st.header("📋 Project Overview")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("🎯 Project Details")
-        st.write("""
-        **Project**: P2S-Warning-System  
-        **Type**: MLOps Earthquake Early Warning  
-        **Developer**: Nirabhay Singh Rathod  
-        **Email**: nirbhay105633016@gmail.com  
-        **Tech Stack**: Python, ML, MLOps  
-        
-        **Core Innovation**:  
-        • Dual ML model architecture  
-        • Real-time seismic data processing  
-        • 5-10 second advance warning system  
-        • Automated safety protocols  
-        """)
-    
-    with col2:
-        st.subheader("🏗️ System Architecture")
-        st.write("""
-        **ML Pipeline**:
-        1. **Data Ingestion** - Real-time seismic streams
-        2. **Feature Engineering** - 6 seismic parameters
-        3. **Dual Model Prediction**:
-           - Model A: P-wave Classifier (Binary)
-           - Model B: S-wave Regressor (Time prediction)
-        4. **Alert Generation** - 5-10s advance warning
-        
-        **MLOps Stack**:
-        • Git/GitHub - Code versioning  
-        • DVC/DagsHub - Data versioning  
-        • MLflow - Experiment tracking  
-        • Airflow - Pipeline orchestration  
-        • Docker - Containerization  
-        • Streamlit - Deployment interface  
-        """)
-    
-    # Technical Specifications
-    st.header("🔧 Technical Specifications")
-    
-    spec_col1, spec_col2, spec_col3 = st.columns(3)
-    
-    with spec_col1:
-        st.markdown("**📊 Data Pipeline**")
-        st.write("""
-        • **Data Source**: Seismic sensors  
-        • **Features**: 6 parameters  
-        • **Frequency**: Real-time streaming  
-        • **Processing**: Window-based features  
-        • **Validation**: Automated quality checks  
-        """)
-    
-    with spec_col2:
-        st.markdown("**🤖 ML Models**")
-        st.write("""
-        • **P-wave Detection**: Binary classification  
-        • **S-wave Prediction**: Regression  
-        • **Model Types**: 5 algorithms compared  
-        • **Selection**: Best model auto-selected  
-        • **Metrics**: ROC-AUC >0.80, R² >0.80  
-        """)
-    
-    with spec_col3:
-        st.markdown("**🚀 MLOps Pipeline**")
-        st.write("""
-        • **CI/CD**: GitHub Actions  
-        • **Orchestration**: Airflow DAGs  
-        • **Tracking**: MLflow experiments  
-        • **Versioning**: DVC for data/models  
-        • **Deployment**: Docker containers  
-        """)
-    
-    # Performance Metrics Section
-    st.header("📈 Performance Metrics")
-    
-    if models_loaded:
-        # Show loaded model info
-        metrics_col1, metrics_col2 = st.columns(2)
-        
-        with metrics_col1:
-            st.success(f"✅ **P-wave Model Loaded**")
-            st.write(f"**Type**: {type(pwave_model).__name__}")
-            st.write("**Target Metric**: ROC-AUC > 0.80")
-            st.write("**Critical Requirement**: Recall > 95%")
-            
-            # Performance gauge for P-wave
-            fig = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=92,
-                domain={'x': [0, 1], 'y': [0, 1]},
-                title={'text': "P-wave Detection Recall"},
-                gauge={'axis': {'range': [0, 100]},
-                       'bar': {'color': "green"},
-                       'threshold': {'line': {'color': "red", 'width': 4},
-                                     'thickness': 0.75, 'value': 95}}
-            ))
-            st.plotly_chart(fig, use_container_width=True)
-        
-        with metrics_col2:
-            st.success(f"✅ **S-wave Model Loaded**")
-            st.write(f"**Type**: {type(swave_model).__name__}")
-            st.write("**Target Metric**: R² > 0.80")
-            st.write("**Critical Requirement**: RMSE < 3 seconds")
-            
-            # Performance gauge for S-wave
-            fig = go.Figure(go.Indicator(
-                mode="gauge+number",
-                value=2.4,
-                domain={'x': [0, 1], 'y': [0, 1]},
-                title={'text': "S-wave Prediction RMSE"},
-                gauge={'axis': {'range': [0, 10], 'tickwidth': 1},
-                       'bar': {'color': "blue"},
-                       'threshold': {'line': {'color': "red", 'width': 4},
-                                     'thickness': 0.75, 'value': 3}}
-            ))
-            st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.warning("⚠️ **Train models first to see performance metrics**")
-        st.info("Run `python train.py` to train the models")
+    st.info("👈 Enter sensor readings and click **PREDICT EARTHQUAKE**")
 
-# Footer with your details
-st.divider()
+# MLOps & Architecture
+
+st.header("⚙️ MLOps Pipeline & Deployment")
+
 st.markdown("""
-<div style='text-align: center'>
-    <h4>P2S Earthquake Warning System | Developed by Nirabhay Singh Rathod</h4>
-    <p>
-        <strong>Email:</strong> nirbhay105633016@gmail.com | 
-        <strong>GitHub:</strong> <a href="https://github.com/NirabhayRathod" target="_blank">NirabhayRathod</a> |
-        <strong>LinkedIn:</strong> <a href="https://linkedin.com/in/nirabhayrathod" target="_blank">nirabhayrathod</a>
-    </p>
-    <p>
-        <strong>MLOps Stack:</strong> Git • DVC • MLflow • Airflow • Docker • Streamlit
-    </p>
-    <p style='font-size: 0.8em; color: #666;'>
-        © 2024 P2S Earthquake Warning System | All rights reserved
-    </p>
+<div class="info-card">
+<b>Training</b><br>
+• Data versioned using DVC + DagsHub<br>
+• Multiple ML models trained & evaluated<br>
+• Best models registered in MLflow<br><br>
+
+<b>Orchestration</b><br>
+• Apache Airflow schedules retraining pipelines<br>
+• Automated model promotion to Production<br><br>
+
+<b>Deployment</b><br>
+• Streamlit app loads <b>Production models</b> from MLflow<br>
+• Dockerized inference service<br>
+• CI/CD using GitHub Actions
 </div>
 """, unsafe_allow_html=True)
 
-# For running: streamlit run app.py
+
+# Footer
+
+st.divider()
+st.markdown("""
+<div style="text-align:center">
+    <h4>P2S Earthquake Early Warning System</h4>
+    <p><strong>Developer:</strong> Nirabhay Singh Rathod</p>
+    <p><strong>Contact:</strong> nirbhay105633016@gmail.com</p>
+    <p><strong>MLOps Stack:</strong> Git • DVC • MLflow • Airflow • Docker • Streamlit</p>
+</div>
+""", unsafe_allow_html=True)
