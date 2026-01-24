@@ -93,6 +93,26 @@ st.markdown("""
 st.markdown(
     "**Dual ML Models:** P-wave detection (classification) + S-wave arrival prediction (regression)"
 )
+st.header("🧠 How This System Works")
+
+st.markdown("""
+<div class="info-card">
+<b>1. Seismic Signal Capture</b><br>
+Raw vibration signals are collected from seismic sensors.<br><br>
+
+<b>2. Feature Engineering</b><br>
+Six engineered features are extracted including amplitude, noise level, PGA, and SNR.<br><br>
+
+<b>3. P-wave Detection</b><br>
+A classification model detects early P-waves indicating earthquake onset.<br><br>
+
+<b>4. S-wave Arrival Prediction</b><br>
+If detected, a regression model predicts remaining time before destructive S-waves arrive.<br><br>
+
+<b>5. Early Warning</b><br>
+The system provides a <b>5–10 second advance warning</b> enabling immediate safety actions.
+</div>
+""", unsafe_allow_html=True)
 
 
 # Load Models from MLflow Registry
@@ -144,26 +164,7 @@ with st.sidebar:
 
 # How the System Works
 
-st.header("🧠 How This System Works")
 
-st.markdown("""
-<div class="info-card">
-<b>1. Seismic Signal Capture</b><br>
-Raw vibration signals are collected from seismic sensors.<br><br>
-
-<b>2. Feature Engineering</b><br>
-Six engineered features are extracted including amplitude, noise level, PGA, and SNR.<br><br>
-
-<b>3. P-wave Detection</b><br>
-A classification model detects early P-waves indicating earthquake onset.<br><br>
-
-<b>4. S-wave Arrival Prediction</b><br>
-If detected, a regression model predicts remaining time before destructive S-waves arrive.<br><br>
-
-<b>5. Early Warning</b><br>
-The system provides a <b>5–10 second advance warning</b> enabling immediate safety actions.
-</div>
-""", unsafe_allow_html=True)
 
 
 # Prediction Section
