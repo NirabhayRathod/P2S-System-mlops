@@ -1,6 +1,4 @@
-
 # Imports
-
 import os
 import numpy as np
 import pandas as pd
@@ -11,18 +9,14 @@ load_dotenv()
 import mlflow
 import mlflow.pyfunc
 
-
 # Helper: Required environment vars
-
 def require_env(name: str) -> str:
     value = os.getenv(name)
     if not value:
         raise RuntimeError(f"Missing environment variable: {name}")
     return value
 
-
 # MLflow + DagsHub Configuration
-
 try:
     DAGSHUB_USER = require_env("DAGSHUB_USER")
     DAGSHUB_TOKEN = require_env("DAGSHUB_TOKEN")
@@ -31,70 +25,123 @@ except RuntimeError as e:
     st.error(f"❌ Configuration Error: {e}")
     st.stop()
 
-# Auth for DagsHub MLflow
 os.environ["MLFLOW_TRACKING_USERNAME"] = DAGSHUB_USER
 os.environ["MLFLOW_TRACKING_PASSWORD"] = DAGSHUB_TOKEN
-
-# Set MLflow Tracking URI
 mlflow.set_tracking_uri(DAGSHUB_MLFLOW_URI)
 
 # Streamlit Page Config
-
 st.set_page_config(
     page_title="P2S Earthquake Warning System",
     page_icon="🌍",
     layout="wide"
 )
 
-# Global Styling
-
+# ========================
+# CUSTOM CSS FOR BETTER UI
+# ========================
 st.markdown("""
 <style>
-.main { background-color: #0e1117; }
-h1, h2, h3 { color: #f1f5f9; }
-.badge {
-    display: inline-block;
-    padding: 6px 12px;
-    border-radius: 20px;
-    background-color: #1f2937;
-    color: #38bdf8;
-    font-size: 0.8rem;
-    margin-right: 6px;
-}
-.info-card {
-    background-color: #020617;
-    padding: 20px;
-    border-radius: 16px;
-    border: 1px solid #1e293b;
-    margin-bottom: 20px;
-}
+    /* Main background */
+    .main {
+        background-color: #0b1120;
+    }
+    /* Cards */
+    .info-card {
+        background-color: #0f172a;
+        padding: 1.5rem;
+        border-radius: 20px;
+        border: 1px solid #1e293b;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5);
+    }
+    /* Alert cards */
+    .alert-danger {
+        background: linear-gradient(135deg, #7f1a1a, #991b1b);
+        border-left: 8px solid #ef4444;
+        padding: 1.2rem;
+        border-radius: 16px;
+        text-align: center;
+        margin: 1rem 0;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+    }
+    .alert-success {
+        background: linear-gradient(135deg, #064e3b, #047857);
+        border-left: 8px solid #10b981;
+        padding: 1.2rem;
+        border-radius: 16px;
+        text-align: center;
+        margin: 1rem 0;
+    }
+    .big-number {
+        font-size: 3.5rem;
+        font-weight: 800;
+        color: #facc15;
+        margin: 0.5rem 0;
+    }
+    .warning-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: white;
+        letter-spacing: 2px;
+    }
+    .metric-label {
+        font-size: 0.9rem;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #f1f5f9;
+    }
+    hr {
+        border-color: #1e293b;
+    }
+    .stButton button {
+        background: linear-gradient(90deg, #dc2626, #ef4444);
+        color: white;
+        font-weight: bold;
+        font-size: 1.2rem;
+        padding: 0.6rem 1.5rem;
+        border-radius: 40px;
+        border: none;
+        transition: all 0.3s;
+    }
+    .stButton button:hover {
+        transform: scale(1.02);
+        background: linear-gradient(90deg, #b91c1c, #dc2626);
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # Header
-
 st.markdown("""
 <div class="info-card">
-    <h1>🌍 P2S Earthquake Early Warning System</h1>
-    <p style="color:#94a3b8;">
-        AI-powered real-time earthquake detection with early warning capability
+    <h1 style="color:#f1f5f9;">🌍 P2S Earthquake Early Warning System</h1>
+    <p style="color:#94a3b8; font-size:1.1rem;">
+        AI‑powered real‑time earthquake detection with early warning capability
     </p>
     <div>
-        <span class="badge">Machine Learning</span>
-        <span class="badge">MLOps</span>
-        <span class="badge">MLflow</span>
-        <span class="badge">Airflow</span>
-        <span class="badge">Docker</span>
-        <span class="badge">Streamlit</span>
+        <span style="display:inline-block; background:#1e293b; color:#38bdf8; padding:4px 12px; border-radius:20px; font-size:0.8rem; margin-right:6px;">Machine Learning</span>
+        <span style="display:inline-block; background:#1e293b; color:#38bdf8; padding:4px 12px; border-radius:20px; font-size:0.8rem; margin-right:6px;">MLOps</span>
+        <span style="display:inline-block; background:#1e293b; color:#38bdf8; padding:4px 12px; border-radius:20px; font-size:0.8rem; margin-right:6px;">MLflow</span>
+        <span style="display:inline-block; background:#1e293b; color:#38bdf8; padding:4px 12px; border-radius:20px; font-size:0.8rem; margin-right:6px;">Airflow</span>
+        <span style="display:inline-block; background:#1e293b; color:#38bdf8; padding:4px 12px; border-radius:20px; font-size:0.8rem; margin-right:6px;">Docker</span>
+        <span style="display:inline-block; background:#1e293b; color:#38bdf8; padding:4px 12px; border-radius:20px; font-size:0.8rem;">Streamlit</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown(
-    "**Dual ML Models:** P-wave detection (classification) + S-wave arrival prediction (regression)"
-)
-st.header("🧠 How This System Works")
+# ==============================================
+# PLACEHOLDER FOR PREDICTION RESULTS (will be filled on button click)
+# ==============================================
+prediction_placeholder = st.container()
 
+# ==============================================
+# HOW THIS SYSTEM WORKS (always visible)
+# ==============================================
+st.header("🧠 How This System Works")
 st.markdown("""
 <div class="info-card">
 <b>1. Seismic Signal Capture</b><br>
@@ -114,133 +161,145 @@ The system provides a <b>5–10 second advance warning</b> enabling immediate sa
 </div>
 """, unsafe_allow_html=True)
 
-
-# Load Models from MLflow Registry
-
-@st.cache_resource(show_spinner=True)
-def load_models():
-    """
-    Load Production models from MLflow Model Registry.
-    This is the ONLY correct approach for production inference.
-    """
-    try:
-        pwave_model = mlflow.pyfunc.load_model(
-            "models:/P2S_PWAVE_MODEL/Production"
-        )
-        swave_model = mlflow.pyfunc.load_model(
-            "models:/P2S_SWAVE_MODEL/Production"
-        )
-        return pwave_model, swave_model
-    except Exception as e:
-        raise RuntimeError(str(e))
-
 # Sidebar Inputs
-
 with st.sidebar:
     st.header("📡 Seismic Sensor Inputs")
-
     sensor_reading = st.number_input("Sensor Reading", -1000.0, 1000.0, 0.45)
     noise_level = st.slider("Noise Level", 0.0, 1.0, 0.28)
     rolling_avg = st.number_input("Rolling Average", -100.0, 100.0, 3.07)
     reading_diff = st.number_input("Reading Difference", -10.0, 10.0, 0.24)
     pga = st.slider("PGA (Peak Ground Acceleration)", 0.0, 1.0, 0.33)
     snr = st.number_input("SNR (Signal-to-Noise Ratio)", -50.0, 50.0, 16.44)
-
     threshold = st.slider("Alert Threshold", 0.0, 1.0, 0.8, 0.05)
-
     st.divider()
     predict_btn = st.button("🚨 PREDICT EARTHQUAKE", use_container_width=True)
 
-    # Load models safely
+    # Load models
+    @st.cache_resource(show_spinner=False)
+    def load_models():
+        try:
+            pwave_model = mlflow.pyfunc.load_model("models:/P2S_PWAVE_MODEL/Production")
+            swave_model = mlflow.pyfunc.load_model("models:/P2S_SWAVE_MODEL/Production")
+            return pwave_model, swave_model
+        except Exception as e:
+            raise RuntimeError(str(e))
+
     try:
         pwave_model, swave_model = load_models()
-        st.success("✅ Models loaded from MLflow (Production)")
+        st.success("✅ Models ready (Production)")
         model_ready = True
     except Exception as e:
         st.error("❌ Model loading failed")
         st.code(str(e))
         model_ready = False
 
-
-# How the System Works
-
-
-
-
-# Prediction Section
-
-st.header("📡 Live Earthquake Prediction Dashboard")
-
+# ==============================================
+# PREDICTION LOGIC - updates the placeholder above
+# ==============================================
 if predict_btn and model_ready:
-
     features = np.array([[
-        sensor_reading,
-        noise_level,
-        rolling_avg,
-        reading_diff,
-        pga,
-        snr
+        sensor_reading, noise_level, rolling_avg,
+        reading_diff, pga, snr
     ]])
+    pwave_prob = float(pwave_model.predict(features)[0])
+    earthquake_detected = pwave_prob > threshold
 
-    pwave_probability = float(pwave_model.predict(features)[0])
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric("P-wave Probability", f"{pwave_probability:.2%}")
-
-    with col2:
-        if pwave_probability > threshold:
-            st.error("🔴 EARTHQUAKE DETECTED")
-        else:
-            st.success("🟢 NO EARTHQUAKE")
-
-    with col3:
-        if pwave_probability > threshold:
+    # Clear the placeholder and write new results
+    with prediction_placeholder:
+        st.markdown("---")
+        st.header("📊 Real‑time Prediction Results")
+        
+        if earthquake_detected:
             swave_arrival = float(swave_model.predict(features)[0])
-            st.metric("S-wave Arrival", f"{swave_arrival:.1f} seconds")
+            st.markdown(f"""
+            <div class="alert-danger">
+                <div class="warning-title">⚠️ EARTHQUAKE DETECTED ⚠️</div>
+                <div style="font-size:1.3rem; margin-top:0.5rem;">S‑wave will arrive in</div>
+                <div class="big-number">{swave_arrival:.1f} seconds</div>
+                <div style="margin-top:0.8rem;">🔔 Take cover immediately! 🔔</div>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            st.metric("S-wave Arrival", "N/A")
+            st.markdown(f"""
+            <div class="alert-success">
+                <div class="warning-title" style="color:#a7f3d0;">✅ NO EARTHQUAKE DETECTED</div>
+                <div style="font-size:1.2rem; margin-top:0.5rem;">Ground is stable</div>
+                <div style="margin-top:0.5rem;">P‑wave probability: {pwave_prob:.2%} (below threshold)</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-    fig = go.Figure(go.Scatterpolar(
-        r=[pwave_probability, abs(sensor_reading) / 10, pga, min(abs(snr) / 50, 1)],
-        theta=["P-wave Prob", "Amplitude", "PGA", "SNR"],
-        fill="toself"
-    ))
-    fig.update_layout(
-        polar=dict(radialaxis=dict(visible=True, range=[0, 1])),
-        title="Seismic Signature Pattern"
-    )
-    st.plotly_chart(fig, use_container_width=True)
+        # Metrics row
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric(label="P‑wave Probability", value=f"{pwave_prob:.2%}", delta=None)
+        with col2:
+            st.metric(label="Alert Threshold", value=f"{threshold:.0%}")
+        with col3:
+            if earthquake_detected:
+                st.metric(label="S‑wave arrival (seconds)", value=f"{swave_arrival:.1f} sec", delta="WARNING")
+            else:
+                st.metric(label="S‑wave arrival", value="N/A")
 
+        # Gauge chart
+        fig_gauge = go.Figure(go.Indicator(
+            mode="gauge+number+delta",
+            value=pwave_prob * 100,
+            title={"text": "P‑wave Probability (%)", "font": {"color": "white"}},
+            domain={'x': [0, 1], 'y': [0, 1]},
+            gauge={
+                'axis': {'range': [None, 100], 'tickcolor': "white"},
+                'bar': {'color': "#ef4444"},
+                'steps': [
+                    {'range': [0, threshold*100], 'color': "#14532d"},
+                    {'range': [threshold*100, 100], 'color': "#7f1a1a"}
+                ],
+                'threshold': {
+                    'line': {'color': "#facc15", 'width': 4},
+                    'thickness': 0.75,
+                    'value': threshold*100
+                }
+            }
+        ))
+        fig_gauge.update_layout(height=300, paper_bgcolor="#0f172a", font={'color': 'white'})
+        st.plotly_chart(fig_gauge, use_container_width=True)
+
+        # Input vs Prediction insights
+        with st.expander("🔍 Seismic Signature Analysis"):
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.write("**Input Features**")
+                input_df = pd.DataFrame({
+                    "Feature": ["Sensor Reading", "Noise Level", "Rolling Avg", "Reading Diff", "PGA", "SNR"],
+                    "Value": [sensor_reading, noise_level, rolling_avg, reading_diff, pga, snr]
+                })
+                st.dataframe(input_df, hide_index=True, use_container_width=True)
+            with col_b:
+                st.write("**Model Interpretation**")
+                if earthquake_detected:
+                    st.markdown("• High P‑wave probability suggests **impending S‑wave**")
+                    st.markdown("• PGA and SNR values indicate significant ground motion")
+                else:
+                    st.markdown("• P‑wave probability below safety threshold")
+                    st.markdown("• No immediate action required")
 else:
-    st.info("👈 Enter sensor readings and click **PREDICT EARTHQUAKE**")
+    # If no prediction yet, show a placeholder message in the container
+    with prediction_placeholder:
+        st.info("👈 Enter sensor readings in the sidebar and click **PREDICT EARTHQUAKE** to see real‑time warnings.")
 
-# MLOps & Architecture
-
+# MLOps & Architecture Section
+st.markdown("---")
 st.header("⚙️ MLOps Pipeline & Deployment")
-
-st.markdown("""
-<div class="info-card">
-<b>Training</b><br>
-• Data versioned using DVC + DagsHub<br>
-• Multiple ML models trained & evaluated<br>
-• Best models registered in MLflow<br><br>
-
-<b>Orchestration</b><br>
-• Apache Airflow schedules retraining pipelines<br>
-• Automated model promotion to Production<br><br>
-
-<b>Deployment</b><br>
-• Streamlit app loads <b>Production models</b> from MLflow<br>
-• Dockerized inference service<br>
-• CI/CD using GitHub Actions
-</div>
-""", unsafe_allow_html=True)
-
+with st.expander("📦 View full MLOps architecture"):
+    st.markdown("""
+    - **Data Versioning**: DVC + DagsHub  
+    - **Experiment Tracking**: MLflow  
+    - **Orchestration**: Apache Airflow (scheduled retraining)  
+    - **Model Registry**: MLflow Model Registry (Production stage)  
+    - **Deployment**: Docker + Streamlit on Render  
+    - **CI/CD**: GitHub Actions  
+    """)
 
 # Footer
-
 st.divider()
 st.markdown("""
 <div style="text-align:center">
